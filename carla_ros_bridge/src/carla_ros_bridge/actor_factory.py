@@ -29,7 +29,7 @@ from carla_ros_bridge.ego_vehicle import EgoVehicle
 from carla_ros_bridge.gnss import Gnss
 from carla_ros_bridge.imu import ImuSensor
 from carla_ros_bridge.lane_invasion_sensor import LaneInvasionSensor
-from carla_ros_bridge.lidar import Lidar, SemanticLidar
+from carla_ros_bridge.lidar import Lidar, SemanticLidar, LivoxLidar
 from carla_ros_bridge.marker_sensor import MarkerSensor
 from carla_ros_bridge.object_sensor import ObjectSensor
 from carla_ros_bridge.odom_sensor import OdometrySensor
@@ -279,7 +279,14 @@ class ActorFactory(object):
 
     def _create_object(self, uid, type_id, name, attach_to, spawn_pose, carla_actor=None):
         # check that the actor is not already created.
+        if carla_actor is not None:
+            print("[DEBUG] _create_object() called")
+            print("[DEBUG] carla_actor.id =", carla_actor.id)
+            print("[DEBUG] carla_actor.type_id =", carla_actor.type_id)
+            print("[DEBUG] carla_actor.role_name =", carla_actor.attributes.get("role_name", "None"))
+
         if carla_actor is not None and carla_actor.id in self.actors:
+            print("[DEBUG] Actor already in self.actors → SKIPPING")
             return None
 
         if attach_to != 0:
@@ -393,6 +400,8 @@ class ActorFactory(object):
                     actor = SemanticLidar(uid, name, parent, spawn_pose,
                                           self.node, carla_actor,
                                           self.sync_mode)
+                elif carla_actor.type_id.endswith("sensor.lidar.ray_cast_livox"):
+                    actor = LivoxLidar(uid, name, parent, spawn_pose, self.node,carla_actor, self.sync_mode)
             elif carla_actor.type_id.startswith("sensor.other.radar"):
                 actor = Radar(uid, name, parent, spawn_pose, self.node,
                               carla_actor, self.sync_mode)

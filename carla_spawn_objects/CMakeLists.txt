@@ -33,6 +33,8 @@ elseif(${ROS_VERSION} EQUAL 2)
   find_package(rclpy REQUIRED)
   ament_export_dependencies(rclpy)
   
+  file(GLOB CONFIG_FILES "config/*.json")
+  install(FILES ${CONFIG_FILES} DESTINATION share/${PROJECT_NAME}/config)
   install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
   
   install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME})

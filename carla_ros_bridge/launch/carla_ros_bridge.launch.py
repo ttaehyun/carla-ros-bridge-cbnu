@@ -41,7 +41,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='town',
-            default_value='OChang',
+            default_value='C_track_1_0_7',
             description='Either use an available CARLA town (eg. "Town01") or an OpenDRIVE file (ending in .xodr)'
         ),
         launch.actions.DeclareLaunchArgument(

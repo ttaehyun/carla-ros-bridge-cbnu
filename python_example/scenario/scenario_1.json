@@ -1,5 +1,8 @@
 {
-	"npc list": ["npc1", "npc2"],
+    "npc list": [
+        "npc1",
+        "npc2"
+    ],
     "npc1": {
         "speed": 0,
         "point": -1,
