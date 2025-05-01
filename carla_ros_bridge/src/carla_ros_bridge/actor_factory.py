@@ -15,7 +15,7 @@ import time
 from enum import Enum
 from threading import Thread, Lock
 
-import carla 
+import carla
 import numpy as np
 
 import carla_common.transforms as trans
@@ -45,7 +45,6 @@ from carla_ros_bridge.traffic import Traffic, TrafficLight
 from carla_ros_bridge.traffic_lights_sensor import TrafficLightsSensor
 from carla_ros_bridge.vehicle import Vehicle
 from carla_ros_bridge.walker import Walker
-
 
 # to generate a random spawning position or vehicles
 import random
@@ -280,7 +279,14 @@ class ActorFactory(object):
 
     def _create_object(self, uid, type_id, name, attach_to, spawn_pose, carla_actor=None):
         # check that the actor is not already created.
+        if carla_actor is not None:
+            print("[DEBUG] _create_object() called")
+            print("[DEBUG] carla_actor.id =", carla_actor.id)
+            print("[DEBUG] carla_actor.type_id =", carla_actor.type_id)
+            print("[DEBUG] carla_actor.role_name =", carla_actor.attributes.get("role_name", "None"))
+
         if carla_actor is not None and carla_actor.id in self.actors:
+            print("[DEBUG] Actor already in self.actors → SKIPPING")
             return None
 
         if attach_to != 0:
@@ -395,8 +401,7 @@ class ActorFactory(object):
                                           self.node, carla_actor,
                                           self.sync_mode)
                 elif carla_actor.type_id.endswith("sensor.lidar.ray_cast_livox"):
-                    actor = LivoxLidar(uid, name, parent, spawn_pose, self.node,
-                                  carla_actor, self.sync_mode)
+                    actor = LivoxLidar(uid, name, parent, spawn_pose, self.node,carla_actor, self.sync_mode)
             elif carla_actor.type_id.startswith("sensor.other.radar"):
                 actor = Radar(uid, name, parent, spawn_pose, self.node,
                               carla_actor, self.sync_mode)
