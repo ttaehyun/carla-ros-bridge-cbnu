@@ -18,7 +18,7 @@ finally ask for a random one to the spawn service.
 import json
 import math
 import os
-
+import signal
 from transforms3d.euler import euler2quat
 
 import ros_compatibility as roscomp
@@ -59,6 +59,7 @@ class CarlaSpawnObjects(CompatibleNode):
     def spawn_object(self, spawn_object_request):
         response_id = -1
         response = self.call_service(self.spawn_object_service, spawn_object_request, spin_until_response_received=True)
+        self.loginfo(f"[DEBUG] spawn_object: Requested spawn of {spawn_object_request.type}/{spawn_object_request.id}, response ID = {response.id}")
         response_id = response.id
         if response_id != -1:
             self.loginfo("Object (type='{}', id='{}') spawned successfully as {}.".format(
@@ -181,6 +182,8 @@ class CarlaSpawnObjects(CompatibleNode):
                     if response_id != -1:
                         player_spawned = True
                         self.players.append(response_id)
+                        self.loginfo(f"[DEBUG] setup_vehicles: Appended player {response_id} to self.players")
+
                         # Set up the sensors
                         try:
                             self.setup_sensors(vehicle["sensors"], response_id)
@@ -261,6 +264,7 @@ class CarlaSpawnObjects(CompatibleNode):
                     self.global_sensors.append(response_id)
                 else:
                     self.vehicles_sensors.append(response_id)
+                self.loginfo(f"[DEBUG] setup_sensors: Appended sensor {response_id} to {'global_sensors' if attached_vehicle_id is None else 'vehicles_sensors'}")
 
             except KeyError as e:
                 self.logerr(
@@ -307,72 +311,120 @@ class CarlaSpawnObjects(CompatibleNode):
 
     def destroy(self):
         """
-        destroy all the players and sensors
+        Destroy all the players and sensors
         """
-        self.loginfo("Destroying spawned objects...")
         try:
+            try:
+                self.loginfo("[DEBUG] destroy(): waiting for destroy_object_service...")
+                ok = self.destroy_object_service.wait_for_service(timeout_sec=1.0)
+            except Exception as e:
+                self.logwarn(f"[EXCEPTION] wait_for_service() failed: {e}")
+                return
+
+            if not ok:
+                self.logwarn("Destroy service is unavailable. carla_ros_bridge might have shut down.")
+                return
+
+            self.loginfo("Destroying spawned objects...")
+            self.loginfo(f"[DEBUG] destroy(): players = {self.players}")
+            self.loginfo(f"[DEBUG] destroy(): vehicles_sensors = {self.vehicles_sensors}")
+            self.loginfo(f"[DEBUG] destroy(): global_sensors = {self.global_sensors}")
+
             # destroy vehicles sensors
             for actor_id in self.vehicles_sensors:
-                destroy_object_request = roscomp.get_service_request(DestroyObject)
-                destroy_object_request.id = actor_id
-                self.call_service(self.destroy_object_service,
-                                  destroy_object_request, timeout=0.5, spin_until_response_received=True)
-                self.loginfo("Object {} successfully destroyed.".format(actor_id))
+                try:
+                    destroy_object_request = roscomp.get_service_request(DestroyObject)
+                    destroy_object_request.id = actor_id
+                    self.loginfo(f"[DEBUG] destroy(): Attempting to destroy actor ID {actor_id}")
+                    if roscomp.ok():
+                        self.call_service(self.destroy_object_service,
+                                        destroy_object_request, timeout=0.5, spin_until_response_received=True)
+                        self.loginfo(f"Object {actor_id} successfully destroyed.")
+                except Exception as e:
+                    self.logwarn(f"[ERROR] Failed to destroy vehicle sensor {actor_id}: {e}")
             self.vehicles_sensors = []
 
             # destroy global sensors
             for actor_id in self.global_sensors:
-                destroy_object_request = roscomp.get_service_request(DestroyObject)
-                destroy_object_request.id = actor_id
-                self.call_service(self.destroy_object_service,
-                                  destroy_object_request, timeout=0.5, spin_until_response_received=True)
-                self.loginfo("Object {} successfully destroyed.".format(actor_id))
+                try:
+                    destroy_object_request = roscomp.get_service_request(DestroyObject)
+                    destroy_object_request.id = actor_id
+                    self.loginfo(f"[DEBUG] destroy(): Attempting to destroy actor ID {actor_id}")
+                    if roscomp.ok():
+                        self.call_service(self.destroy_object_service,
+                                        destroy_object_request, timeout=0.5, spin_until_response_received=True)
+                        self.loginfo(f"Object {actor_id} successfully destroyed.")
+                except Exception as e:
+                    self.logwarn(f"[ERROR] Failed to destroy global sensor {actor_id}: {e}")
             self.global_sensors = []
 
-            # destroy player
+            # destroy players
             for player_id in self.players:
-                destroy_object_request = roscomp.get_service_request(DestroyObject)
-                destroy_object_request.id = player_id
-                self.call_service(self.destroy_object_service,
-                                  destroy_object_request, timeout=0.5, spin_until_response_received=True)
-                self.loginfo("Object {} successfully destroyed.".format(player_id))
+                try:
+                    destroy_object_request = roscomp.get_service_request(DestroyObject)
+                    destroy_object_request.id = player_id
+                    self.loginfo(f"[DEBUG] destroy(): Attempting to destroy actor ID {player_id}")
+                    if roscomp.ok():
+                        self.call_service(self.destroy_object_service,
+                                        destroy_object_request, timeout=0.5, spin_until_response_received=True)
+                        self.loginfo(f"Object {player_id} successfully destroyed.")
+                except Exception as e:
+                    self.logwarn(f"[ERROR] Failed to destroy player {player_id}: {e}")
             self.players = []
-        except ServiceException:
-            self.logwarn(
-                'Could not call destroy service on objects, the ros bridge is probably already shutdown')
+
+        except Exception as e:
+            self.logwarn(f"[EXCEPTION] destroy() failed: {e}")
 
 # ==============================================================================
 # -- main() --------------------------------------------------------------------
 # ==============================================================================
 
+spawn_objects_node = None
+
+def handle_sigint(signum, frame):
+    print("[INFO] Caught SIGINT (Ctrl+C). Destroying spawned actors...")
+    if spawn_objects_node is not None:
+        try:
+            spawn_objects_node.destroy()
+            roscomp.logwarn("All objects destroy!!")
+        except Exception as e:
+            print(f"[WARN] Exception during destroy: {e}")
+    try:
+        roscomp.shutdown()
+    except Exception as e:
+        print(f"[WARN] roscomp.shutdown() failed: {e}")
+    exit(0)
 
 def main(args=None):
     """
     main function
     """
+    global spawn_objects_node
     roscomp.init("spawn_objects", args=args)
-    spawn_objects_node = None
+
+    # SIGINT 핸들러 등록
+    signal.signal(signal.SIGINT, handle_sigint)
+
     try:
         spawn_objects_node = CarlaSpawnObjects()
-        roscomp.on_shutdown(spawn_objects_node.destroy)
+        spawn_objects_node.spawn_objects()
+        spawn_objects_node.spin()
     except KeyboardInterrupt:
-        roscomp.logerr("Could not initialize CarlaSpawnObjects. Shutting down.")
-
-    if spawn_objects_node:
-        try:
-            spawn_objects_node.spawn_objects()
+        roscomp.logwarn("KeyboardInterrupt received.")
+    except (ROSInterruptException, ServiceException) as e:
+        roscomp.logwarn(f"Exception: {e}")
+    except RuntimeError as e:
+        roscomp.logfatal(f"Runtime error: {e}")
+    finally:
+        if spawn_objects_node is not None:
             try:
-                spawn_objects_node.spin()
-            except (ROSInterruptException, ServiceException, KeyboardInterrupt):
-                pass
-        except (ROSInterruptException, ServiceException, KeyboardInterrupt):
-            spawn_objects_node.logwarn(
-                "Spawning process has been interrupted. There might be actors that have not been destroyed properly")
-        except RuntimeError as e:
-            roscomp.logfatal("Exception caught: {}".format(e))
-        finally:
+                spawn_objects_node.destroy()
+            except Exception as e:
+                roscomp.logwarn(f"Exception during destroy in finally: {e}")
+        try:
             roscomp.shutdown()
-
+        except Exception as e:
+            print(f"[WARN] roscomp.shutdown() failed in finally: {e}")
 
 if __name__ == '__main__':
     main()
