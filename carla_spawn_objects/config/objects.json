@@ -24,8 +24,8 @@
             "type": "vehicle.unmannedsolution.erp42",
             "id": "hero",
             "spawn_point": {
-                "x": -240.0,
-                "y": 25.7,
+                "x": -192.8,
+                "y": 19.5,
                 "z": 17.0,
                 "roll": 0.0,
                 "pitch": 0.0,
@@ -36,9 +36,9 @@
                     "type": "sensor.camera.rgb",
                     "id": "rgb_front",
                     "spawn_point": {
-                        "x": 2.0,
+                        "x": 1.0,
                         "y": 0.0,
-                        "z": 2.0,
+                        "z": 0.9,
                         "roll": 0.0,
                         "pitch": 0.0,
                         "yaw": 0.0
@@ -72,11 +72,11 @@
                     "type": "sensor.lidar.ray_cast_livox",
                     "id": "livox_lidar",
                     "spawn_point": {
-                        "x": 0.0,
-                        "y": -3.0,
-                        "z": 2.2,
+                        "x": 1.0,
+                        "y": 0.0,
+                        "z": 1.0,
                         "roll": 0.0,
-                        "pitch": 0.0,
+                        "pitch": 10.0,
                         "yaw": 0.0
                     },
                     "channels": 1,
@@ -95,7 +95,7 @@
                     "spawn_point": {
                         "x": 0.0,
                         "y": 0.0,
-                        "z": 2.4,
+                        "z": 1.2,
                         "roll": 0.0,
                         "pitch": 0.0,
                         "yaw": 0.0
@@ -112,9 +112,98 @@
                     "type": "sensor.other.gnss",
                     "id": "gnss",
                     "spawn_point": {
+                        "x": -2.0,
+                        "y": 0.0,
+                        "z": 0.9
+                    },
+                    "noise_alt_stddev": 0.0,
+                    "noise_lat_stddev": 0.0,
+                    "noise_lon_stddev": 0.0,
+                    "noise_alt_bias": 0.0,
+                    "noise_lat_bias": 0.0,
+                    "noise_lon_bias": 0.0
+                },
+                {
+                    "type": "sensor.other.collision",
+                    "id": "collision",
+                    "spawn_point": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    }
+                },
+                {
+                    "type": "sensor.other.lane_invasion",
+                    "id": "lane_invasion",
+                    "spawn_point": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    }
+                },
+                {
+                    "type": "sensor.pseudo.tf",
+                    "id": "tf"
+                },
+                {
+                    "type": "sensor.pseudo.objects",
+                    "id": "objects"
+                },
+                {
+                    "type": "sensor.pseudo.odom",
+                    "id": "odometry"
+                },
+                {
+                    "type": "sensor.pseudo.speedometer",
+                    "id": "speedometer"
+                },
+                {
+                    "type": "actor.pseudo.control",
+                    "id": "control"
+                }
+            ]
+        },
+        {
+            "type": "vehicle.unmannedsolution.erp42",
+            "id": "npc1",
+            "color": "0,0,150",
+            "spawn_point": {
+                "x": -192.1,
+                "y": 14.1,
+                "z": 17.0,
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": 100.0
+            },
+            "sensors": [
+                {
+                    "type": "sensor.camera.rgb",
+                    "id": "rgb_view",
+                    "spawn_point": {
+                        "x": -4.5,
+                        "y": 0.0,
+                        "z": 2.8,
+                        "roll": 0.0,
+                        "pitch": 20.0,
+                        "yaw": 0.0
+                    },
+                    "image_size_x": 1024,
+                    "image_size_y": 768,
+                    "fov": 90.0,
+                    "attached_objects": [
+                        {
+                            "type": "actor.pseudo.control",
+                            "id": "control"
+                        }
+                    ]
+                },
+                {
+                    "type": "sensor.other.gnss",
+                    "id": "gnss",
+                    "spawn_point": {
                         "x": 1.0,
                         "y": 0.0,
-                        "z": 2.0
+                        "z": 0.7
                     },
                     "noise_alt_stddev": 0.0,
                     "noise_lat_stddev": 0.0,
